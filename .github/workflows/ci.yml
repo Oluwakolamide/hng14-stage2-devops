@@ -7,10 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  # ─────────────────────────────────────────────
   # STAGE 1 — LINT
-  # ─────────────────────────────────────────────
-  lint:
+    lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -54,9 +52,7 @@ jobs:
           hadolint worker/Dockerfile
           hadolint frontend/Dockerfile
 
-  # ─────────────────────────────────────────────
   # STAGE 2 — TEST
-  # ─────────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -91,9 +87,7 @@ jobs:
             coverage.xml
             htmlcov/
 
-  # ─────────────────────────────────────────────
   # STAGE 3 — BUILD
-  # ─────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -142,9 +136,7 @@ jobs:
           docker push localhost:5000/frontend:${{ github.sha }}
           docker push localhost:5000/frontend:latest
 
-  # ─────────────────────────────────────────────
   # STAGE 4 — SECURITY SCAN
-  # ─────────────────────────────────────────────
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -203,9 +195,7 @@ jobs:
           name: trivy-sarif-results
           path: trivy-*.sarif
 
-  # ─────────────────────────────────────────────
   # STAGE 5 — INTEGRATION TEST
-  # ─────────────────────────────────────────────
   integration-test:
     name: Integration Test
     runs-on: ubuntu-latest
@@ -243,9 +233,7 @@ jobs:
         if: always()
         run: docker compose down -v --remove-orphans
 
-  # ─────────────────────────────────────────────
   # STAGE 6 — DEPLOY  (main branch only)
-  # ─────────────────────────────────────────────
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
