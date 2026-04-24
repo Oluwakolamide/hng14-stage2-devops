@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /build
 COPY package.json ./
 RUN npm install --only=production
 
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /build/node_modules ./node_modules

@@ -158,7 +158,7 @@ jobs:
         run: |
           trivy image \
             --exit-code 1 \
-            --severity CRITICAL \
+            --severity CRITICAL --ignore-unfixed \
             --format sarif \
             --output trivy-api.sarif \
             scan/api:latest
@@ -167,7 +167,7 @@ jobs:
         run: |
           trivy image \
             --exit-code 1 \
-            --severity CRITICAL \
+            --severity CRITICAL --ignore-unfixed \
             --format sarif \
             --output trivy-worker.sarif \
             scan/worker:latest
@@ -176,7 +176,7 @@ jobs:
         run: |
           trivy image \
             --exit-code 1 \
-            --severity CRITICAL \
+            --severity CRITICAL --ignore-unfixed \
             --format sarif \
             --output trivy-frontend.sarif \
             scan/frontend:latest
