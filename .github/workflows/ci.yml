@@ -108,22 +108,37 @@ jobs:
 
       - name: Build and push API image
         run: |
-          docker build -t localhost:5000/api:${{ github.sha }} \
-                       -t localhost:5000/api:latest api/
+          docker build \
+            --cache-from localhost:5000/api:latest \
+            -t localhost:5000/api:${{ github.sha }} \
+            -t localhost:5000/api:latest api/ || \
+          docker build \
+            -t localhost:5000/api:${{ github.sha }} \
+            -t localhost:5000/api:latest api/
           docker push localhost:5000/api:${{ github.sha }}
           docker push localhost:5000/api:latest
 
       - name: Build and push Worker image
         run: |
-          docker build -t localhost:5000/worker:${{ github.sha }} \
-                       -t localhost:5000/worker:latest worker/
+          docker build \
+            --cache-from localhost:5000/worker:latest \
+            -t localhost:5000/worker:${{ github.sha }} \
+            -t localhost:5000/worker:latest worker/ || \
+          docker build \
+            -t localhost:5000/worker:${{ github.sha }} \
+            -t localhost:5000/worker:latest worker/
           docker push localhost:5000/worker:${{ github.sha }}
           docker push localhost:5000/worker:latest
 
       - name: Build and push Frontend image
         run: |
-          docker build -t localhost:5000/frontend:${{ github.sha }} \
-                       -t localhost:5000/frontend:latest frontend/
+          docker build \
+            --cache-from localhost:5000/frontend:latest \
+            -t localhost:5000/frontend:${{ github.sha }} \
+            -t localhost:5000/frontend:latest frontend/ || \
+          docker build \
+            -t localhost:5000/frontend:${{ github.sha }} \
+            -t localhost:5000/frontend:latest frontend/
           docker push localhost:5000/frontend:${{ github.sha }}
           docker push localhost:5000/frontend:latest
 
@@ -216,28 +231,9 @@ jobs:
              done'
           echo "Stack is healthy."
 
-      - name: Submit a job and poll until completed
-        run: |
-          JOB_RESP=$(curl -sf -X POST http://localhost:3000/submit)
-          echo "API response: $JOB_RESP"
-          JOB_ID=$(echo "$JOB_RESP" | python3 -c \
-            "import sys, json; print(json.load(sys.stdin)['job_id'])")
-          echo "Submitted job ID: $JOB_ID"
-
-          for i in $(seq 1 30); do
-            STATUS_RESP=$(curl -sf "http://localhost:3000/status/$JOB_ID")
-            STATUS=$(echo "$STATUS_RESP" | python3 -c \
-              "import sys, json; print(json.load(sys.stdin)['status'])")
-            echo "Poll $i — status: $STATUS"
-            if [ "$STATUS" = "completed" ]; then
-              echo "✅ Job completed successfully."
-              exit 0
-            fi
-            sleep 2
-          done
-
-          echo "❌ Job did not reach 'completed' within 60 seconds."
-          exit 1
+      - name: Run integration test script
+        timeout-minutes: 3
+        run: bash integration_test.sh
 
       - name: Show container logs on failure
         if: failure()

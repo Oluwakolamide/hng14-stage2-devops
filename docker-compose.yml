@@ -1,5 +1,6 @@
 services:
   redis:
+    restart: unless-stopped
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}
     networks:
@@ -17,6 +18,7 @@ services:
           memory: 128M
 
   api:
+    restart: unless-stopped
     build: ./api
     environment:
       - REDIS_HOST=redis
@@ -26,6 +28,7 @@ services:
       - internal
     depends_on:
       redis:
+    restart: unless-stopped
         condition: service_healthy
     healthcheck:
       test:
@@ -46,6 +49,7 @@ services:
           memory: 256M
 
   worker:
+    restart: unless-stopped
     build: ./worker
     environment:
       - REDIS_HOST=redis
@@ -55,6 +59,7 @@ services:
       - internal
     depends_on:
       redis:
+    restart: unless-stopped
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "healthcheck.py"]
@@ -69,6 +74,7 @@ services:
           memory: 128M
 
   frontend:
+    restart: unless-stopped
     build: ./frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -79,6 +85,7 @@ services:
       - internal
     depends_on:
       api:
+    restart: unless-stopped
         condition: service_healthy
     healthcheck:
       test:
