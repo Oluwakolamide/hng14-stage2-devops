@@ -9,7 +9,7 @@ WORKDIR /app
 RUN groupadd --system appgroup \
     && useradd --system --gid appgroup --home-dir /app appuser
 COPY --from=builder /install /usr/local
-COPY worker.py healthcheck.py .
+COPY worker.py healthcheck.py ./
 RUN chown -R appuser:appgroup /app
 USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
