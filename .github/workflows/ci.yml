@@ -262,7 +262,7 @@ jobs:
         run: |
           install -m 600 /dev/null /tmp/deploy_key
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
-
+     
       - name: Rolling update on server
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -276,34 +276,18 @@ jobs:
             cd ~/hng14-stage2-devops
             git pull origin main
 
+            # Rolling update per service
             for SERVICE in api worker frontend; do
-              echo "==> Rolling update: $SERVICE"
-
-              # Build new image
+              echo "==> Updating $SERVICE"
               docker compose build "$SERVICE"
+              docker compose up -d --no-deps "$SERVICE"
 
-              # Get current running container ID (may be empty on first deploy)
-              OLD_ID=$(docker compose ps -q "$SERVICE" 2>/dev/null || true)
-
-              # Start the new container alongside the old one
-              docker compose up -d --no-deps --scale "$SERVICE=2" "$SERVICE" \
-                2>/dev/null || true
-
-              # Find the new container (not the old one)
-              NEW_ID=$(docker compose ps -q "$SERVICE" 2>/dev/null \
-                | grep -v "$OLD_ID" | head -1)
-
-              if [ -z "$NEW_ID" ]; then
-                echo "Could not identify new container for $SERVICE — aborting."
-                exit 1
-              fi
-
-              # Wait up to 60 s for the new container to pass its health check
+              # Wait up to 60s for health
               ELAPSED=0
               while [ $ELAPSED -lt 60 ]; do
                 HEALTH=$(docker inspect \
-                  --format='{{.State.Health.Status}}' "$NEW_ID" 2>/dev/null \
-                  || echo "none")
+                  --format="{{.State.Health.Status}}" \
+                  $(docker compose ps -q "$SERVICE") 2>/dev/null || echo "none")
                 echo "  health: $HEALTH (${ELAPSED}s)"
                 [ "$HEALTH" = "healthy" ] && break
                 sleep 5
@@ -311,25 +295,13 @@ jobs:
               done
 
               if [ "$HEALTH" != "healthy" ]; then
-                echo "New $SERVICE container failed health check. Leaving old one running."
-                docker stop "$NEW_ID" 2>/dev/null || true
-                docker rm   "$NEW_ID" 2>/dev/null || true
+                echo "$SERVICE failed health check — aborting"
                 exit 1
               fi
-
-              # New container is healthy — stop and remove the old one
-              if [ -n "$OLD_ID" ]; then
-                docker stop "$OLD_ID"
-                docker rm   "$OLD_ID"
-              fi
-
-              # Scale back down to 1 replica in compose state
-              docker compose up -d --no-deps --scale "$SERVICE=1" "$SERVICE" \
-                2>/dev/null || true
-
-              echo "  $SERVICE updated successfully."
+              echo "  $SERVICE updated successfully"
             done
           REMOTE
+  
 
       - name: Clean up SSH key
         if: always()
