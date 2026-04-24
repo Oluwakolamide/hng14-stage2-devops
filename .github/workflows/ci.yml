@@ -276,18 +276,25 @@ jobs:
             cd ~/hng14-stage2-devops
             git pull origin main
 
-            # Rolling update per service
+            docker compose up -d redis
+            sleep 15
+
             for SERVICE in api worker frontend; do
               echo "==> Updating $SERVICE"
               docker compose build "$SERVICE"
               docker compose up -d --no-deps "$SERVICE"
 
-              # Wait up to 60s for health
               ELAPSED=0
+              HEALTH="starting"
               while [ $ELAPSED -lt 60 ]; do
-                HEALTH=$(docker inspect \
-                  --format="{{.State.Health.Status}}" \
-                  $(docker compose ps -q "$SERVICE") 2>/dev/null || echo "none")
+                CONTAINER_ID=$(docker compose ps -q "$SERVICE" 2>/dev/null | head -1)
+                if [ -n "$CONTAINER_ID" ]; then
+                  HEALTH=$(docker inspect \
+                    --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                    "$CONTAINER_ID" 2>/dev/null || echo "none")
+                else
+                  HEALTH="none"
+                fi
                 echo "  health: $HEALTH (${ELAPSED}s)"
                 [ "$HEALTH" = "healthy" ] && break
                 sleep 5
@@ -301,7 +308,6 @@ jobs:
               echo "  $SERVICE updated successfully"
             done
           REMOTE
-  
 
       - name: Clean up SSH key
         if: always()
